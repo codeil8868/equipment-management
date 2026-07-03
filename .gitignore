@@ -1,0 +1,20 @@
+# === 비밀/환경 (절대 커밋 금지) ===
+**/.env
+**/.env.*
+**/.vercel
+
+# === 개인정보(PII) 포함 — 로컬 보관, 커밋 금지 ===
+# 1회성 데이터 이관 스크립트(대여자 연락처·이름 등 실데이터 포함)
+migration.sql
+gas_all.json
+
+# === 의존성/빌드 산출물 ===
+**/node_modules/
+**/.next/
+**/out/
+**/build/
+*.tsbuildinfo
+
+# === 기타 ===
+.DS_Store
+npm-debug.log*
