@@ -57,7 +57,7 @@ const CONFIGS: Record<string, Config> = {
     ],
   },
   facilities: {
-    title: '🏢 시설·안전시설 — 전체', table: 'facilities', order: 'mgmt_no', editable: true,
+    title: '🏢 시설·안전시설 — 전체', table: 'facilities', order: 'mgmt_no', editable: true, cardKind: 'facility',
     columns: [
       { key: 'mgmt_no', label: '관리번호' }, { key: 'category', label: '구분' }, { key: 'name', label: '시설명' },
       { key: 'class', label: '분류' }, { key: 'location', label: '위치' }, { key: 'installed_on', label: '설치일', date: true },
@@ -65,7 +65,7 @@ const CONFIGS: Record<string, Config> = {
     ],
   },
   software: {
-    title: '💿 소프트웨어 — 전체', table: 'software_master', order: 'name', editable: true,
+    title: '💿 소프트웨어 — 전체', table: 'software_master', order: 'name', editable: true, cardKind: 'software',
     columns: [
       { key: 'name', label: '소프트웨어명' }, { key: 'category', label: '구분' }, { key: 'license_type', label: '라이선스' },
       { key: 'owned_qty', label: '보유', num: true }, { key: 'installed_qty', label: '설치', num: true }, { key: 'renew_on', label: '갱신일', date: true },
@@ -239,7 +239,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
               </form>
             </div>
           )}
-          {cardAsset && <AssetHistoryCard asset={cardAsset} onClose={() => setCardAsset(null)} />}
+          {cardAsset && <AssetHistoryCard kind={cfg.cardKind ?? 'equipment'} asset={cardAsset} onClose={() => setCardAsset(null)} />}
         </div>
       )}
     </>
