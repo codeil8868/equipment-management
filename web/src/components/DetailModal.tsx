@@ -83,6 +83,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
   const [editRow, setEditRow] = useState<Row | null>(null);
+  const [isNew, setIsNew] = useState(false);
   const [vals, setVals] = useState<Row>({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -116,7 +117,17 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
     const v: Row = {};
     cfg.columns.forEach((c) => { v[c.key] = r[c.key] ?? ''; });
     setVals(v);
+    setIsNew(false);
     setEditRow(r);
+    setErr('');
+  }
+
+  function openNew() {
+    const v: Row = {};
+    cfg.columns.forEach((c) => { v[c.key] = ''; });
+    setVals(v);
+    setIsNew(true);
+    setEditRow({}); // 폼 열기용 (id 없음)
     setErr('');
   }
 
@@ -131,10 +142,13 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
       else if (c.num) val = Number(val);
       patch[c.key] = val;
     });
-    const { error } = await supabase.from(cfg.table).update(patch).eq('id', editRow.id as number);
+    const { error } = isNew
+      ? await supabase.from(cfg.table).insert(patch)
+      : await supabase.from(cfg.table).update(patch).eq('id', editRow.id as number);
     setBusy(false);
     if (error) { setErr(error.message); return; }
     setEditRow(null);
+    setIsNew(false);
     await fetchAll();
     onChange?.();
   }
@@ -157,7 +171,12 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
           <div className="max-h-[85vh] w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b p-4">
               <h3 className="font-semibold">{cfg.title} <span className="text-xs font-normal text-slate-400">({filtered.length}건)</span></h3>
-              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <div className="flex items-center gap-3">
+                {cfg.editable && (
+                  <button onClick={openNew} className="rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700">+ 신규 등록</button>
+                )}
+                <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
             </div>
             <div className="border-b p-3">
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="검색…" className={inputCls} />
@@ -195,9 +214,9 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
 
           {/* 수정 폼 */}
           {editRow && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setEditRow(null)}>
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => { setEditRow(null); setIsNew(false); }}>
               <form onSubmit={saveEdit} className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="mb-4 font-semibold">항목 수정</h3>
+                <h3 className="mb-4 font-semibold">{isNew ? '신규 등록' : '항목 수정'}</h3>
                 <div className="max-h-[60vh] overflow-auto">
                   {cfg.columns.map((c) => (
                     <label key={c.key} className="mb-3 block">
@@ -211,7 +230,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
                 </div>
                 {err && <div className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
                 <div className="mt-2 flex justify-end gap-2">
-                  <button type="button" onClick={() => setEditRow(null)} className="rounded border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">취소</button>
+                  <button type="button" onClick={() => { setEditRow(null); setIsNew(false); }} className="rounded border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">취소</button>
                   <button type="submit" disabled={busy} className="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">{busy ? '저장 중…' : '저장'}</button>
                 </div>
               </form>
