@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { AssetHistoryCard } from './AssetHistoryCard';
 
 type Col = { key: string; label: string; money?: boolean; num?: boolean; date?: boolean };
-type Config = { title: string; table: string; order?: string; editable?: boolean; columns: Col[] };
+type Config = { title: string; table: string; order?: string; editable?: boolean; cardKind?: string; columns: Col[] };
 
 const CONFIGS: Record<string, Config> = {
   inspection: {
@@ -48,7 +49,7 @@ const CONFIGS: Record<string, Config> = {
     ],
   },
   equipment: {
-    title: '💻 장비목록 — 전체', table: 'equipment', order: 'asset_no', editable: true,
+    title: '💻 장비목록 — 전체', table: 'equipment', order: 'asset_no', editable: true, cardKind: 'equipment',
     columns: [
       { key: 'asset_no', label: '자산번호' }, { key: 'name', label: '장비명' }, { key: 'class', label: '분류' },
       { key: 'spec', label: '세부사양' }, { key: 'qty', label: '수량', num: true }, { key: 'location', label: '설치위치' },
@@ -83,6 +84,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
   const [editRow, setEditRow] = useState<Row | null>(null);
+  const [cardAsset, setCardAsset] = useState<Row | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [vals, setVals] = useState<Row>({});
   const [busy, setBusy] = useState(false);
@@ -200,6 +202,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
                         })}
                         {cfg.editable && (
                           <td className="whitespace-nowrap px-2 py-2">
+                            {cfg.cardKind && <button onClick={() => setCardAsset(r)} className="mr-2 text-xs text-emerald-700 hover:underline">📇 카드</button>}
                             <button onClick={() => openEdit(r)} className="mr-2 text-xs text-blue-600 hover:underline">수정</button>
                             <button onClick={() => del(r)} className="text-xs text-red-600 hover:underline">삭제</button>
                           </td>
@@ -236,6 +239,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
               </form>
             </div>
           )}
+          {cardAsset && <AssetHistoryCard asset={cardAsset} onClose={() => setCardAsset(null)} />}
         </div>
       )}
     </>
