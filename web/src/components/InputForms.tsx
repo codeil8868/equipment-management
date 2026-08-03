@@ -396,3 +396,65 @@ export function BudgetButton({ category, staff, onDone }: { category: string; st
     </>
   );
 }
+
+// ---------- 연간 예산 편성 (연도별 예산 설정) ----------
+const BUDGET_CATS = ['훈련장비 유지보수 및 교체', '훈련시설 및 안전시설 유지관리', '소모품 기타'];
+
+export function BudgetPlanButton({ onDone }: { onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+
+  // 연도 입력 시 기존 예산이 있으면 불러와 프리필(수정), 없으면 빈 값(신규)
+  useEffect(() => {
+    if (!open) return;
+    const y = Number(year);
+    if (!y) { setAmounts({}); return; }
+    supabase.from('budget').select('category,annual_budget').eq('year', y).then(({ data }) => {
+      const m: Record<string, string> = {};
+      ((data as { category: string; annual_budget: number }[]) ?? []).forEach((r) => { m[r.category] = String(r.annual_budget ?? ''); });
+      setAmounts(m);
+    });
+  }, [open, year]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(''); setMsg('');
+    const y = Number(year);
+    if (!y || y < 2000 || y > 2100) { setErr('올바른 연도를 입력하세요 (예: 2027).'); return; }
+    setBusy(true);
+    const rows = BUDGET_CATS.map((cat) => ({ year: y, category: cat, annual_budget: Number(amounts[cat]) || 0 }));
+    const { error } = await supabase.from('budget').upsert(rows, { onConflict: 'year,category' });
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    setMsg(`${y}년 예산이 저장되었습니다.`);
+    onDone();
+  }
+
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className="rounded border border-emerald-600 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50">📅 예산 편성</button>
+      {open && (
+        <Modal title="연간 예산 편성" onClose={() => setOpen(false)}>
+          <form onSubmit={submit}>
+            <Field label="연도">
+              <input type="number" className={inputCls} value={year} onChange={(e) => { setYear(e.target.value); setMsg(''); }} placeholder="예: 2027" />
+            </Field>
+            {BUDGET_CATS.map((cat) => (
+              <Field key={cat} label={`${cat} — 연간예산(원)`}>
+                <input type="number" className={inputCls} value={amounts[cat] ?? ''} onChange={(e) => setAmounts({ ...amounts, [cat]: e.target.value })} placeholder="0" />
+              </Field>
+            ))}
+            <p className="mb-3 text-xs text-slate-500">해당 연도 예산이 있으면 불러와 수정, 없으면 새로 만듭니다. 저장 후 상단 연도 목록에 그 연도가 나타납니다.</p>
+            {err && <div className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
+            {msg && <div className="mb-3 rounded bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{msg}</div>}
+            <SubmitBar busy={busy} onClose={() => setOpen(false)} />
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
