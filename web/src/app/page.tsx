@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 import Login from '@/components/Login';
-import { SupplyTxnButton, RentalButton, ReturnButton, InspectionButton, BudgetButton } from '@/components/InputForms';
+import { SupplyTxnButton, RentalButton, ReturnButton, InspectionButton, BudgetButton, BudgetPlanButton } from '@/components/InputForms';
 import { DetailLink } from '@/components/DetailModal';
 import type {
   SupplyStatus, RentalAvail, BudgetSummary, Inspection, Equipment, Facility, Software,
@@ -164,7 +164,10 @@ function Dashboard({ email }: { email: string }) {
 
         <div className="mt-6 mb-2 flex items-center justify-between">
           <h2 className="font-semibold">💰 예산·사용기록</h2>
-          <DetailLink configKey="budget" onChange={load} />
+          <div className="flex items-center gap-2">
+            <BudgetPlanButton onDone={load} />
+            <DetailLink configKey="budget" onChange={load} />
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {BUDGET_ORDER.map((cat) => {
