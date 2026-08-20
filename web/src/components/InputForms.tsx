@@ -236,6 +236,8 @@ export function InspectionButton({ staff, facilities, equipment, onDone }: {
   const [date, setDate] = useState(today());
   const [facility, setFacility] = useState('');
   const [asset, setAsset] = useState('');
+  const [checkedAssets, setCheckedAssets] = useState<string[]>([]);
+  const [assetFilter, setAssetFilter] = useState('');
   const [target, setTarget] = useState('');
   const [item, setItem] = useState('');
   const [m1, setM1] = useState('');
@@ -246,20 +248,33 @@ export function InspectionButton({ staff, facilities, equipment, onDone }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
+  const isChecklist = htype === '점검' && (itype === '월간' || itype === '연간');
+  const filteredEquipment = equipment.filter((eq) =>
+    !assetFilter || eq.name.includes(assetFilter) || eq.asset_no.includes(assetFilter)
+  );
+
+  function toggleAsset(assetNo: string) {
+    setCheckedAssets((prev) => prev.includes(assetNo) ? prev.filter((a) => a !== assetNo) : [...prev, assetNo]);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr('');
     if (!date || !item || !result || !m1) { setErr('점검일·내용·결과·담당자(정)은 필수입니다.'); return; }
     setBusy(true);
-    const { error } = await supabase.from('inspection_log').insert({
+    const base = {
       inspected_on: date, history_type: htype, inspection_type: htype === '점검' ? itype : null,
-      target: target || null, facility_name: facility || null, asset_no: asset || null,
+      target: target || null, facility_name: facility || null,
       item, manager_primary: m1, manager_secondary: m2 || null, cost: Number(cost) || 0,
       result, action: action || null,
-    });
+    };
+    const rows = isChecklist && checkedAssets.length > 0
+      ? checkedAssets.map((assetNo) => ({ ...base, asset_no: assetNo }))
+      : [{ ...base, asset_no: asset || null }];
+    const { error } = await supabase.from('inspection_log').insert(rows);
     setBusy(false);
     if (error) { setErr(error.message); return; }
-    setOpen(false); setItem(''); setResult(''); setAction(''); setCost('');
+    setOpen(false); setItem(''); setResult(''); setAction(''); setCost(''); setCheckedAssets([]); setAssetFilter('');
     onDone();
   }
 
@@ -288,12 +303,32 @@ export function InspectionButton({ staff, facilities, equipment, onDone }: {
                 {facilities.map((f) => <option key={f} value={f}>{f}</option>)}
               </select>
             </Field>
-            <Field label="자산번호 (장비 이력이면)">
-              <select className={inputCls} value={asset} onChange={(e) => setAsset(e.target.value)}>
-                <option value="">— (선택) —</option>
-                {equipment.map((eq) => <option key={eq.asset_no} value={eq.asset_no}>{eq.asset_no} · {eq.name}</option>)}
-              </select>
-            </Field>
+            {isChecklist ? (
+              <Field label={`점검 대상 장비 (복수 선택, ${checkedAssets.length}개 선택됨)`}>
+                <input
+                  className={`${inputCls} mb-2`}
+                  value={assetFilter}
+                  onChange={(e) => setAssetFilter(e.target.value)}
+                  placeholder="장비명/자산번호로 검색"
+                />
+                <div className="max-h-48 overflow-y-auto rounded border border-slate-300 p-2">
+                  {filteredEquipment.length === 0 && <div className="px-1 py-1 text-sm text-slate-400">일치하는 장비 없음</div>}
+                  {filteredEquipment.map((eq) => (
+                    <label key={eq.asset_no} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-slate-50">
+                      <input type="checkbox" checked={checkedAssets.includes(eq.asset_no)} onChange={() => toggleAsset(eq.asset_no)} />
+                      <span>{eq.asset_no} · {eq.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </Field>
+            ) : (
+              <Field label="자산번호 (장비 이력이면)">
+                <select className={inputCls} value={asset} onChange={(e) => setAsset(e.target.value)}>
+                  <option value="">— (선택) —</option>
+                  {equipment.map((eq) => <option key={eq.asset_no} value={eq.asset_no}>{eq.asset_no} · {eq.name}</option>)}
+                </select>
+              </Field>
+            )}
             <Field label="점검대상 (선택)"><input className={inputCls} value={target} onChange={(e) => setTarget(e.target.value)} placeholder="예: 실습 PC" /></Field>
             <Field label="내용/점검항목"><input className={inputCls} value={item} onChange={(e) => setItem(e.target.value)} /></Field>
             <Field label="담당자(정)">
