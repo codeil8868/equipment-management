@@ -80,6 +80,12 @@ const CONFIGS: Record<string, Config> = {
       { key: 'manager_primary', label: '담당자' },
     ],
   },
+  staff: {
+    title: '👤 담당자 관리', table: 'staff', order: 'name', editable: true,
+    columns: [
+      { key: 'name', label: '이름' }, { key: 'email', label: '이메일 (선택)' },
+    ],
+  },
 };
 
 type Row = Record<string, unknown>;

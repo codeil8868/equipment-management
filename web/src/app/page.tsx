@@ -108,6 +108,7 @@ function Dashboard({ email }: { email: string }) {
             </select>
             <a href="/report" target="_blank" className="rounded border border-slate-300 bg-white px-3 py-1 text-sm hover:bg-slate-50">📄 월간 보고서</a>
             <button onClick={load} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm hover:bg-slate-50">🔄 새로고침</button>
+            <DetailLink configKey="staff" label="👤 담당자 관리" onChange={load} />
             <span className="hidden text-xs text-slate-500 sm:inline">{email}</span>
             <button onClick={() => supabase.auth.signOut()} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm hover:bg-slate-50">로그아웃</button>
           </div>
