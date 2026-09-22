@@ -122,6 +122,7 @@ function Dashboard({ email }: { email: string }) {
           <SuppliesCard rows={supplies} action={
             <div className="flex items-center gap-2">
               <DetailLink configKey="supplies" onChange={load} />
+              <DetailLink configKey="suppliesTxn" label="이력 보기" onChange={load} />
               <SupplyTxnButton items={supplies.map((s) => ({ item_name: s.item_name, current_stock: s.current_stock }))} staff={staff} onDone={load} />
             </div>
           } />

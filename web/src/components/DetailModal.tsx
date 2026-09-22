@@ -25,6 +25,14 @@ const CONFIGS: Record<string, Config> = {
       { key: 'status', label: '상태' }, { key: 'manager', label: '담당자' }, { key: 'last_date', label: '최근거래' },
     ],
   },
+  suppliesTxn: {
+    title: '📦 소모품 입출고 이력 — 전체', table: 'supplies_txn', order: 'txn_date', editable: true,
+    columns: [
+      { key: 'txn_date', label: '일자', date: true }, { key: 'item_name', label: '품목명' },
+      { key: 'txn_type', label: '구분' }, { key: 'qty', label: '수량', num: true },
+      { key: 'reason', label: '사유' }, { key: 'manager', label: '담당자' },
+    ],
+  },
   rental: {
     title: '🎒 대여 기록 — 전체', table: 'rental', order: 'rent_date', editable: true,
     columns: [
@@ -82,6 +90,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState('');
+  const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [cardAsset, setCardAsset] = useState<Row | null>(null);
@@ -107,13 +116,14 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
     setLoading(false);
   }
 
-  useEffect(() => { if (open) fetchAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
+  useEffect(() => { if (open) { setVisibleCount(10); fetchAll(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
 
   if (!cfg) return null;
 
   const filtered = q
     ? rows.filter((r) => cfg.columns.some((c) => String(r[c.key] ?? '').toLowerCase().includes(q.toLowerCase())))
     : rows;
+  const visible = filtered.slice(0, visibleCount);
 
   function openEdit(r: Row) {
     const v: Row = {};
@@ -181,7 +191,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
               </div>
             </div>
             <div className="border-b p-3">
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="검색…" className={inputCls} />
+              <input value={q} onChange={(e) => { setQ(e.target.value); setVisibleCount(10); }} placeholder="검색…" className={inputCls} />
             </div>
             <div className="max-h-[65vh] overflow-auto p-3">
               {loading ? <div className="py-8 text-center text-sm text-slate-400">불러오는 중…</div> : (
@@ -193,7 +203,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((r, i) => (
+                    {visible.map((r, i) => (
                       <tr key={i} className="border-b border-slate-100">
                         {cfg.columns.map((c) => {
                           const v = r[c.key];
@@ -211,6 +221,13 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
                     ))}
                   </tbody>
                 </table>
+              )}
+              {!loading && filtered.length > visibleCount && (
+                <div className="py-3 text-center">
+                  <button onClick={() => setVisibleCount((v) => v + 10)} className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50">
+                    더 보기 ({visibleCount}/{filtered.length})
+                  </button>
+                </div>
               )}
             </div>
           </div>
