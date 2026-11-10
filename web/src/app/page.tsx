@@ -174,7 +174,12 @@ function Dashboard({ email }: { email: string }) {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {BUDGET_ORDER.map((cat) => {
             const b = budget.find((x) => x.year === year && x.category === cat);
-            return <BudgetCard key={cat} category={cat} data={b} action={<BudgetButton category={cat} staff={staff} onDone={load} />} />;
+            return <BudgetCard key={cat} category={cat} data={b} action={
+              <div className="flex items-center gap-2">
+                <DetailLink configKey="budget" initialFilter={cat} onChange={load} />
+                <BudgetButton category={cat} staff={staff} onDone={load} />
+              </div>
+            } />;
           })}
         </div>
 
