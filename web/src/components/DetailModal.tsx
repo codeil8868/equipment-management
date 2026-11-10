@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { AssetHistoryCard } from './AssetHistoryCard';
 
 type Col = { key: string; label: string; money?: boolean; num?: boolean; date?: boolean };
-type Config = { title: string; table: string; order?: string; editable?: boolean; cardKind?: string; columns: Col[] };
+type Config = { title: string; table: string; order?: string; editable?: boolean; cardKind?: string; filter?: { key: string; options: string[] }; columns: Col[] };
 
 const CONFIGS: Record<string, Config> = {
   inspection: {
@@ -50,6 +50,7 @@ const CONFIGS: Record<string, Config> = {
   },
   budget: {
     title: '💰 예산 집행 — 전체', table: 'budget_usage', order: 'spent_on', editable: true,
+    filter: { key: 'category', options: ['훈련장비 유지보수 및 교체', '훈련시설 및 안전시설 유지관리', '소모품 기타'] },
     columns: [
       { key: 'spent_on', label: '집행일', date: true }, { key: 'year', label: '연도', num: true }, { key: 'category', label: '구분' },
       { key: 'item', label: '항목명' }, { key: 'target', label: '대상' }, { key: 'amount', label: '금액', money: true, num: true },
@@ -91,11 +92,12 @@ const CONFIGS: Record<string, Config> = {
 type Row = Record<string, unknown>;
 const inputCls = 'w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none';
 
-export function DetailLink({ configKey, label, onChange }: { configKey: keyof typeof CONFIGS | string; label?: string; onChange?: () => void }) {
+export function DetailLink({ configKey, label, initialFilter, onChange }: { configKey: keyof typeof CONFIGS | string; label?: string; initialFilter?: string; onChange?: () => void }) {
   const cfg = CONFIGS[configKey];
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState('');
+  const [filterVal, setFilterVal] = useState(initialFilter ?? '');
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [editRow, setEditRow] = useState<Row | null>(null);
@@ -122,13 +124,14 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
     setLoading(false);
   }
 
-  useEffect(() => { if (open) { setVisibleCount(10); fetchAll(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
+  useEffect(() => { if (open) { setVisibleCount(10); setFilterVal(initialFilter ?? ''); fetchAll(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
 
   if (!cfg) return null;
 
+  const byFilter = cfg.filter && filterVal ? rows.filter((r) => r[cfg.filter!.key] === filterVal) : rows;
   const filtered = q
-    ? rows.filter((r) => cfg.columns.some((c) => String(r[c.key] ?? '').toLowerCase().includes(q.toLowerCase())))
-    : rows;
+    ? byFilter.filter((r) => cfg.columns.some((c) => String(r[c.key] ?? '').toLowerCase().includes(q.toLowerCase())))
+    : byFilter;
   const visible = filtered.slice(0, visibleCount);
 
   function openEdit(r: Row) {
@@ -143,6 +146,7 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
   function openNew() {
     const v: Row = {};
     cfg.columns.forEach((c) => { v[c.key] = ''; });
+    if (cfg.filter && filterVal) v[cfg.filter.key] = filterVal;
     setVals(v);
     setIsNew(true);
     setEditRow({}); // 폼 열기용 (id 없음)
@@ -196,6 +200,16 @@ export function DetailLink({ configKey, label, onChange }: { configKey: keyof ty
                 <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
               </div>
             </div>
+            {cfg.filter && (
+              <div className="flex flex-wrap gap-1 border-b p-3 pb-2">
+                {['', ...cfg.filter.options].map((o) => (
+                  <button key={o || 'all'} onClick={() => { setFilterVal(o); setVisibleCount(10); }}
+                    className={`rounded px-3 py-1 text-xs ${filterVal === o ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    {o || '전체'}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="border-b p-3">
               <input value={q} onChange={(e) => { setQ(e.target.value); setVisibleCount(10); }} placeholder="검색…" className={inputCls} />
             </div>
