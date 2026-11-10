@@ -54,6 +54,7 @@ export function SupplyTxnButton({ items, staff, onDone }: { items: { item_name: 
   const [date, setDate] = useState(today());
   const [reason, setReason] = useState('');
   const [manager, setManager] = useState('');
+  const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -70,9 +71,23 @@ export function SupplyTxnButton({ items, staff, onDone }: { items: { item_name: 
     const { error } = await supabase.from('supplies_txn').insert({
       txn_date: date, item_name: item, txn_type: type, qty: q, reason, manager,
     });
+    if (error) { setBusy(false); setErr(error.message); return; }
+    // 입고 + 구매금액 → 예산 '소모품 기타' 집행 자동 등록
+    const money = Number(amount);
+    if (type === '입고' && money > 0) {
+      const { error: bErr } = await supabase.from('budget_usage').insert({
+        spent_on: date, year: Number(String(date).slice(0, 4)), category: '소모품 기타', item,
+        target: `${q}개 입고`, amount: money, status: '완료', manager: manager || null, note: '소모품 입고 연동',
+      });
+      if (bErr) {
+        setBusy(false);
+        setErr(`입고는 저장됐지만 예산 집행 등록에 실패했습니다: ${bErr.message}`);
+        onDone();
+        return;
+      }
+    }
     setBusy(false);
-    if (error) { setErr(error.message); return; }
-    setOpen(false); setQty(''); setReason('');
+    setOpen(false); setQty(''); setReason(''); setAmount('');
     onDone();
   }
 
@@ -103,6 +118,11 @@ export function SupplyTxnButton({ items, staff, onDone }: { items: { item_name: 
                 {staff.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
+            {type === '입고' && (
+              <Field label="구매금액(원) (선택)">
+                <input type="number" min="0" className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="입력하면 예산 '소모품 기타' 집행에 자동 등록" />
+              </Field>
+            )}
             {err && <div className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
             <SubmitBar busy={busy} onClose={() => setOpen(false)} />
           </form>
