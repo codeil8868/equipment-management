@@ -80,6 +80,13 @@ function Dashboard({ email }: { email: string }) {
 
   useEffect(() => { load(); }, []);
 
+  async function deleteSupplyItem(name: string) {
+    if (!window.confirm(`'${name}' 품목을 소모품 현황에서 삭제할까요?\n(입출고 이력은 남아 있고, 같은 이름으로 다시 등록하면 이력이 이어집니다)`)) return;
+    const { error } = await supabase.from('supplies_master').delete().eq('item_name', name);
+    if (error) { window.alert('삭제 실패: ' + error.message); return; }
+    load();
+  }
+
   const years = useMemo(() => {
     const ys = Array.from(new Set(budget.map((b) => b.year))).sort((a, b) => b - a);
     return ys.length ? ys : [year];
@@ -120,7 +127,7 @@ function Dashboard({ email }: { email: string }) {
         {loading && <div className="mb-4 text-sm text-slate-500">불러오는 중…</div>}
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SuppliesCard rows={supplies} action={
+          <SuppliesCard rows={supplies} onDelete={deleteSupplyItem} action={
             <div className="flex items-center gap-2">
               <DetailLink configKey="supplies" onChange={load} />
               <DetailLink configKey="suppliesTxn" label="이력 보기" onChange={load} />
@@ -208,7 +215,7 @@ function statusColor(s: string) {
   return 'text-emerald-600';
 }
 
-function SuppliesCard({ rows, action }: { rows: SupplyStatus[]; action?: React.ReactNode }) {
+function SuppliesCard({ rows, action, onDelete }: { rows: SupplyStatus[]; action?: React.ReactNode; onDelete: (name: string) => void }) {
   const lacking = rows.filter((r) => r.status === '부족' || r.status === '결품').length;
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -222,10 +229,11 @@ function SuppliesCard({ rows, action }: { rows: SupplyStatus[]; action?: React.R
         </div>
       </div>
       <Table
-        head={['품목', '현재고', '기준', '상태']}
+        head={['품목', '현재고', '기준', '상태', '']}
         rows={rows.map((r) => [
           r.item_name, `${r.current_stock}${r.unit ?? ''}`, `${r.reorder_level}${r.unit ?? ''}`,
           <span key="s" className={statusColor(r.status)}>● {r.status}</span>,
+          <button key="d" onClick={() => onDelete(r.item_name)} className="text-xs text-red-600 hover:underline">삭제</button>,
         ])}
       />
     </section>
